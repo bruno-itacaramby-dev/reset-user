@@ -5,10 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Context</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+                padding: 1.5rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .container {
+                width: 95%;
+                padding: 1rem;
+            }
+            input {
+                font-size: 1rem;
+            }
+            button {
+                font-size: 1rem;
+                padding: 0.75rem;
+            }
+        }
+    </style>
 </head>
-<body class="bg-gray-800 flex items-center justify-center min-h-screen">
-    <div class="bg-gray-700 p-8 rounded-lg shadow-lg w-1/3 text-white">
-        <h2 class="text-2xl font-bold mb-6">Reset Context</h2>
+<body class="bg-gray-800 flex items-center justify-center min-h-screen p-4">
+    <div class="container bg-gray-700 p-8 rounded-lg shadow-lg w-full max-w-lg text-white">
+        <h2 class="text-2xl font-bold mb-6 text-center">Reset Context</h2>
         
         <label class="block mb-2 text-lg">Router Key:</label>
         <input type="text" id="authKey" class="w-full p-3 border rounded mb-4 text-black" placeholder="Digite a Auth Key">
@@ -25,66 +46,65 @@
     </div>
 
     <script>
-        async function fetchData(authKey, contract, identify) {
-            const url = `https://${contract}.http.msging.net/commands`;
-            
-            const headers = {
+        function createHeaders(authKey) {
+            return {
                 'Content-Type': 'application/json',
                 'Authorization': authKey
             };
-            
+        }
+
+        function createUrl(contract) {
+            return `https://${contract}.http.msging.net/commands`;
+        }
+
+        function generateRandomId() {
+            return crypto.getRandomValues(new Uint32Array(1))[0].toString(16);
+        }
+
+        async function fetchData(authKey, contract, identify) {
+            const url = createUrl(contract);
+            const headers = createHeaders(authKey);
+
             const body = {
                 "id": generateRandomId(),
                 "method": "get",
                 "uri": `/contexts/${identify}?withContextValues=true&$take=1000`
             };
-            
+
             try {
                 const response = await fetch(url, {
                     method: 'POST',
-                    headers: headers,
+                    headers,
                     body: JSON.stringify(body)
                 });
-                
+
                 const data = await response.json();
-                
-                if (data.resource && Array.isArray(data.resource.items)) {
-                    const names = data.resource.items.map(item => item.name);
-                    
-                    for (const name of names) {
-                        await deleteName(authKey, contract, identify, name);
-                    }
+                if (data.resource?.items?.length) {
+                    await Promise.all(data.resource.items.map(item => deleteName(authKey, contract, identify, item.name)));
                 }
                 
                 await deleteUserContext(authKey, contract, identify);
-                
-                document.getElementById("log").innerHTML = "PROCESSO FINALIZADO!";
-                setTimeout(() => {
-                    document.getElementById("log").innerHTML = "";
-                }, 4000);
+                updateLog("PROCESSO FINALIZADO!", "text-green-400");
             } catch (error) {
-                document.getElementById("log").innerHTML = "Erro ao buscar dados.";
+                updateLog("Erro ao buscar dados.", "text-red-400");
+                console.error(error);
             }
         }
 
         async function deleteName(authKey, contract, identify, name) {
-            const url = `https://${contract}.http.msging.net/commands`;
-            
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorization': authKey
-            };
-            
+            const url = createUrl(contract);
+            const headers = createHeaders(authKey);
+
             const body = {
                 "id": generateRandomId(),
                 "method": "delete",
                 "uri": `/contexts/${identify}/${encodeURIComponent(name)}`
             };
-            
+
             try {
                 await fetch(url, {
                     method: 'POST',
-                    headers: headers,
+                    headers,
                     body: JSON.stringify(body)
                 });
             } catch (error) {
@@ -93,23 +113,19 @@
         }
 
         async function deleteUserContext(authKey, contract, identify) {
-            const url = `https://${contract}.http.msging.net/commands`;
-            
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorization': authKey
-            };
-            
+            const url = createUrl(contract);
+            const headers = createHeaders(authKey);
+
             const body = {
                 "id": generateRandomId(),
                 "method": "delete",
                 "uri": `/contacts/${identify}`
             };
-            
+
             try {
                 await fetch(url, {
                     method: 'POST',
-                    headers: headers,
+                    headers,
                     body: JSON.stringify(body)
                 });
             } catch (error) {
@@ -117,19 +133,18 @@
             }
         }
 
-        function generateRandomId() {
-            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
-            for (let i = 0; i < 5; i++) {
-                result += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return result;
+        function updateLog(message, color) {
+            const logElement = document.getElementById("log");
+            logElement.className = `mt-6 text-lg font-bold text-center ${color}`;
+            logElement.innerHTML = message;
+            setTimeout(() => logElement.innerHTML = "", 4000);
         }
 
         document.getElementById("resetBtn").addEventListener("click", () => {
-            const authKey = document.getElementById("authKey").value;
-            const contract = document.getElementById("contract").value;
-            const identify = document.getElementById("identify").value;
+            const authKey = document.getElementById("authKey").value.trim();
+            const contract = document.getElementById("contract").value.trim();
+            const identify = document.getElementById("identify").value.trim();
+
             if (authKey && contract && identify) {
                 fetchData(authKey, contract, identify);
             } else {
