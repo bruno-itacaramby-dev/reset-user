@@ -9,8 +9,12 @@
 <body class="bg-gray-800 flex items-center justify-center min-h-screen">
     <div class="bg-gray-700 p-8 rounded-lg shadow-lg w-1/3 text-white">
         <h2 class="text-2xl font-bold mb-6">Reset Context</h2>
+        
         <label class="block mb-2 text-lg">Auth Key:</label>
         <input type="text" id="authKey" class="w-full p-3 border rounded mb-4 text-black" placeholder="Digite a Auth Key">
+        
+        <label class="block mb-2 text-lg">Contrato:</label>
+        <input type="text" id="contract" class="w-full p-3 border rounded mb-4 text-black" placeholder="Digite o Contrato">
         
         <label class="block mb-2 text-lg">Identify:</label>
         <input type="text" id="identify" class="w-full p-3 border rounded mb-4 text-black" placeholder="Digite o Identify">
@@ -21,8 +25,7 @@
     </div>
 
     <script>
-        async function fetchData(authKey, identify) {
-            const contract = "macro";
+        async function fetchData(authKey, contract, identify) {
             const url = `https://${contract}.http.msging.net/commands`;
             
             const headers = {
@@ -49,23 +52,22 @@
                     const names = data.resource.items.map(item => item.name);
                     
                     for (const name of names) {
-                        await deleteName(authKey, identify, name);
+                        await deleteName(authKey, contract, identify, name);
                     }
                 }
                 
-                await deleteUserContext(authKey, identify);
+                await deleteUserContext(authKey, contract, identify);
                 
                 document.getElementById("log").innerHTML = "PROCESSO FINALIZADO!";
                 setTimeout(() => {
                     document.getElementById("log").innerHTML = "";
-                }, 2000);
+                }, 4000);
             } catch (error) {
                 document.getElementById("log").innerHTML = "Erro ao buscar dados.";
             }
         }
 
-        async function deleteName(authKey, identify, name) {
-            const contract = "macro";
+        async function deleteName(authKey, contract, identify, name) {
             const url = `https://${contract}.http.msging.net/commands`;
             
             const headers = {
@@ -90,8 +92,7 @@
             }
         }
 
-        async function deleteUserContext(authKey, identify) {
-            const contract = "macro";
+        async function deleteUserContext(authKey, contract, identify) {
             const url = `https://${contract}.http.msging.net/commands`;
             
             const headers = {
@@ -127,9 +128,10 @@
 
         document.getElementById("resetBtn").addEventListener("click", () => {
             const authKey = document.getElementById("authKey").value;
+            const contract = document.getElementById("contract").value;
             const identify = document.getElementById("identify").value;
-            if (authKey && identify) {
-                fetchData(authKey, identify);
+            if (authKey && contract && identify) {
+                fetchData(authKey, contract, identify);
             } else {
                 alert("Preencha todos os campos!");
             }
