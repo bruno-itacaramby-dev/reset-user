@@ -32,7 +32,7 @@
                     try {
                         await fetchData(authKey, contract, identify);
                     } catch (error) {
-                        errorMessages.push(`ERRO DE API NA ${authKey} PARA ${identify}`);
+                        errorMessages.push(`API ERROR - ${authKey} - ${identify}`);
                     }
                 }
             }
