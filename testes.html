@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Context</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-800 flex items-center justify-center min-h-screen p-4">
+    <div class="bg-gray-700 px-10 py-10 rounded-lg shadow-lg w-full max-w-4xl text-white">
+        <h2 class="text-3xl font-bold mb-8 text-center">Reset Context</h2>
+
+        <label class="block mb-2 text-lg">Auth Keys:</label>
+        <input type="text" id="authKey" class="w-full p-4 border rounded mb-6 text-black" placeholder="Digite as Auth Keys, separadas por vírgula">
+
+        <label class="block mb-2 text-lg">Contrato:</label>
+        <input type="text" id="contract" class="w-full p-4 border rounded mb-6 text-black" placeholder="Digite o Contrato">
+
+        <label class="block mb-2 text-lg">Identify:</label>
+        <input type="text" id="identify" class="w-full p-4 border rounded mb-6 text-black" placeholder="Digite os Identifies, separados por vírgula">
+
+        <button id="resetBtn" class="w-full bg-red-500 text-white py-4 rounded hover:bg-red-600 text-lg">RESET</button>
+
+        <div id="log" class="mt-8 text-lg font-bold text-center"></div>
+    </div>
+
+    <script>
+        async function resetForMultipleKeysAndIdentifies(authKeys, contract, identifies) {
+            let errorMessages = [];
+            for (const authKey of authKeys) {
+                for (const identify of identifies) {
+                    try {
+                        await fetchData(authKey, contract, identify);
+                    } catch (error) {
+                        errorMessages.push(`ERRO DE API NA ${authKey} PARA ${identify}`);
+                    }
+                }
+            }
+            
+            const logElement = document.getElementById("log");
+            logElement.innerHTML = `<p class='text-green-400'>PROCESSO FINALIZADO!</p>`;
+            if (errorMessages.length) {
+                logElement.innerHTML += `<p class='text-red-500 break-words'>${errorMessages.join('<br>')}</p>`;
+            }
+        }
+
+        async function fetchData(authKey, contract, identify) {
+            const url = `https://${contract}.http.msging.net/commands`;
+            const headers = { 'Content-Type': 'application/json', 'Authorization': authKey };
+            const body = {
+                "id": generateRandomId(),
+                "method": "get",
+                "uri": `/contexts/${identify}?withContextValues=true&$take=1000`
+            };
+
+            const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+            if (!response.ok) {
+                throw new Error(`Erro na requisição para ${identify}`);
+            }
+
+            const data = await response.json();
+
+            if (data.resource && Array.isArray(data.resource.items)) {
+                const names = data.resource.items.map(item => item.name);
+                for (const name of names) {
+                    await deleteName(authKey, contract, identify, name);
+                }
+            }
+            await deleteUserContext(authKey, contract, identify);
+        }
+
+        async function deleteName(authKey, contract, identify, name) {
+            const url = `https://${contract}.http.msging.net/commands`;
+            const headers = { 'Content-Type': 'application/json', 'Authorization': authKey };
+            const body = {
+                "id": generateRandomId(),
+                "method": "delete",
+                "uri": `/contexts/${identify}/${encodeURIComponent(name)}`
+            };
+            await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+        }
+
+        async function deleteUserContext(authKey, contract, identify) {
+            const url = `https://${contract}.http.msging.net/commands`;
+            const headers = { 'Content-Type': 'application/json', 'Authorization': authKey };
+            const body = {
+                "id": generateRandomId(),
+                "method": "delete",
+                "uri": `/contacts/${identify}`
+            };
+            await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+        }
+
+        function generateRandomId() {
+            return Math.random().toString(36).substring(2, 7);
+        }
+
+        document.getElementById("resetBtn").addEventListener("click", () => {
+            const authKeys = document.getElementById("authKey").value.split(",").map(k => k.trim()).filter(k => k);
+            const contract = document.getElementById("contract").value.trim();
+            const identifies = document.getElementById("identify").value.split(",").map(i => i.trim()).filter(i => i);
+
+            if (authKeys.length && contract && identifies.length) {
+                document.getElementById("log").innerHTML = "";
+                resetForMultipleKeysAndIdentifies(authKeys, contract, identifies);
+            } else {
+                alert("Preencha todos os campos!");
+            }
+        });
+    </script>
+</body>
+</html>
